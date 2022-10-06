@@ -4,7 +4,12 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +29,13 @@ import org.json.JSONObject;
 import org.apache.http.client.ClientProtocolException;
 import org.json.JSONTokener;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.type.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,6 +45,8 @@ import aj.org.objectweb.asm.TypeReference;
 import org.json.JSONArray;
 import org.json.JSONException;
 
+//@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
+//@Component
 public class App {
 
 	static final String USERNAME = "ritikamathur1997@outlook.com";
@@ -42,7 +55,7 @@ public class App {
 	static final String GRANTSERVICE = "/services/oauth2/token?grant_type=password";
 	static final String CLIENTID = "3MVG9fe4g9fhX0E41Kb0yYzJsImU5j2GMXIZ8PTsay8KVULSw9MB8nZYqilhxwpQboRDGwwmePa8GYKcl2hNg";
 	static final String CLIENTSECRET = "78F2DE48C8F1C73D1034AC9D004F456BFB8EC5C72226FAFFEE9E20CF1151135B";
-	private static final String REST_ENDPOINT = "/services/data";
+	private static final String REST_ENDPOINT = "/services/async";
 	private static final String API_VERSION = "/v55.0";
 	private static String jobId;
 	private static String baseUri;
@@ -53,6 +66,12 @@ public class App {
 	private static String LeadId;
 
 	public static void main(String[] args) throws IOException, Exception {
+		//SpringApplication.run(App.class, args);
+		parseCSV();
+	}
+	
+	public static void authenticate() throws IOException, Exception {
+
 		HttpClient httpclient = HttpClientBuilder.create().build();
 
 		String loginURL = LOGINURL + GRANTSERVICE + "&client_id=" + CLIENTID + "&client_secret=" + CLIENTSECRET
@@ -109,18 +128,61 @@ public class App {
 		System.out.println(" access token / session ID : " + loginAccessToken);
 
 		httpPost.releaseConnection();
-		
 		createJob();
-		createLeads();
-		updateaccount();
+	
 	}
 
-	public static void createJob() {
+	public static void parseCSV() throws IOException, Exception {
+
+		List<Account> accounts = getAccountDetails("C:/Users/ritik/eclipse-workspace/sfRestApi/src/main/java/com/springCore/sfRestApi/account.csv");
+	
+		for(Account a: accounts) {
+			System.out.println(a.getName());
+			System.out.println(a.getShippingCity());
+		}
+		
+	}
+	private static List<Account> getAccountDetails(String file) {
+		List<Account> accounts = new ArrayList<Account>();
+		try {
+			BufferedReader br = new BufferedReader(new FileReader(file));
+			System.out.println("Buffer Reader "+br.toString());
+			String row = br.readLine();
+			System.out.println("Buffer Reader "+row);
+			
+			while(row != null) {
+				String attributes[] = row.split(",");
+				Account account = getAccount(attributes);
+				accounts.add(account);
+				row = br.readLine();
+				System.out.println("List .."+accounts.get(0).getName());
+			}
+			br.close();
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+		return accounts;
+		
+	}
+
+	private static Account getAccount(String[] attributes) {
+		String Name = attributes[0];
+		String ShippingCity = attributes[1];
+		Account a = new Account(Name, ShippingCity);
+		// TODO Auto-generated method stub
+		System.out.println(a.getName());
+		return a;
+	}
+
+	public static void createJob() throws IOException, Exception {
 
 		System.out.println("\n_ CREATE JOB__");
 
 		// String uri = baseUri + "/sobjects/Account/";
 		String uri = baseUri + "/jobs/ingest/";
+		
+		//String uri = baseUri +API_VERSION+ "/job";
+		//httpPostPOST https://mycompany-42b-dev-ed.my.salesforce.com/services/data/v55.0/services/async/v55.0/job HTTP/1.1
 		try {
 			// create the JS0N object containing the new lead details .
 
@@ -198,7 +260,7 @@ public class App {
 			npe.printStackTrace();
 		}
 		
-	
+	//createLeads();
 		}
 
 	public static void queryLeads() {
@@ -343,6 +405,8 @@ public class App {
 		} catch (NullPointerException npe) {
 			npe.printStackTrace();
 		}
+		
+		updateaccount();
 		
 	}
 	public static void updateaccount() throws Exception, IOException {
