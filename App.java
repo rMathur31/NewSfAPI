@@ -1,6 +1,7 @@
 package com.springCore.sfRestApi;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,7 +18,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.client.HttpClient;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.Header;
@@ -27,6 +28,7 @@ import org.apache.http.HttpStatus;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONObject;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
 import org.json.JSONTokener;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -67,7 +69,7 @@ public class App {
 
 	public static void main(String[] args) throws IOException, Exception {
 		//SpringApplication.run(App.class, args);
-		parseCSV();
+		toJson();
 	}
 	
 	public static void authenticate() throws IOException, Exception {
@@ -132,7 +134,7 @@ public class App {
 	
 	}
 
-	public static void parseCSV() throws IOException, Exception {
+	public static List<Account> parseCSV() throws IOException, Exception {
 
 		List<Account> accounts = getAccountDetails("C:/Users/ritik/eclipse-workspace/sfRestApi/src/main/java/com/springCore/sfRestApi/account.csv");
 	
@@ -140,6 +142,7 @@ public class App {
 			System.out.println(a.getName());
 			System.out.println(a.getShippingCity());
 		}
+		return accounts;
 		
 	}
 	private static List<Account> getAccountDetails(String file) {
@@ -263,8 +266,9 @@ public class App {
 	//createLeads();
 		}
 
-	public static void queryLeads() {
+	public static int queryLeads() {
 		System.out.println("\n_Lead QUERY_\n");
+		int statusCode = 0;
 		try {
 			// Set up the HTTP objects needed to make the request .
 			HttpClient httpClient = HttpClientBuilder.create().build();
@@ -277,7 +281,7 @@ public class App {
 			HttpResponse response = httpClient.execute(httpGet);
 
 			// Process the result
-			int statusCode = response.getStatusLine().getStatusCode();
+			statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode == 200) {
 				String response_string = EntityUtils.toString(response.getEntity());
 				try {
@@ -302,6 +306,8 @@ public class App {
 		} catch (NullPointerException npe) {
 			npe.printStackTrace();
 		}
+		
+		return statusCode;
 	}
 
 	public static void createLeads() throws Exception, IOException {
@@ -507,5 +513,38 @@ public class App {
 			npe.printStackTrace();
 		}
 	}
+	
+	
+	public static void upsert() throws Exception, IOException {
+		int statusCode = queryLeads() ;
+		if(statusCode == 404) {
+			createLeads();
+		}
+		else if(statusCode == 200) {
+			updateaccount();
+		}
+	}
+	
+	public static void toJson() {
+		
+		try {
+			
+			List<Account> accounts = parseCSV();
 
+			for (Account a : accounts) {
+	
+				ObjectMapper mapper = new ObjectMapper();
+				mapper.writeValue(new File("C:/Users/ritik/eclipse-workspace/sfRestApi/targer/account1.json"), a);
+			
+			}
+
+			/*
+			 * Account a = new Account(); a.setName("Ritu"); a.setShippingCity("Ajmer");
+			 */
+		
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+	} 
+	
 }
